@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   ArrowRight, MapPin, Share2, Sparkles, Trophy, Video, Workflow, CheckCircle2,
 } from 'lucide-react'
@@ -22,7 +23,7 @@ export function LandingPage() {
       {/* Nav */}
       <nav className="tm-fade-up relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2 text-lg font-bold">
-          <span className="text-emerald-400">▲</span> Trailmap
+          <Image src="/icon.svg" alt="Trailmap" width={28} height={28} className="rounded-md" /> Trailmap
         </div>
         <div className="flex items-center gap-2">
           <Link href="/try" className="rounded-lg px-4 py-2 text-sm font-medium text-white/70 hover:text-white">
@@ -149,7 +150,10 @@ export function LandingPage() {
       </section>
 
       <footer className="relative z-10 border-t border-white/10 py-8 text-center text-sm text-white/40">
-        <span className="text-emerald-400">▲</span> Trailmap — build and share learning roadmaps.
+        <span className="inline-flex items-center justify-center gap-2">
+          <Image src="/icon.svg" alt="Trailmap" width={20} height={20} className="rounded" />
+          Trailmap — build and share learning roadmaps.
+        </span>
       </footer>
     </main>
   )
