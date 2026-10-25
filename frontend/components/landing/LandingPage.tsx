@@ -39,9 +39,7 @@ export function LandingPage() {
 
       {/* Hero */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 pb-20 pt-16 text-center">
-        <span className="tm-fade-up inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-          <Sparkles size={13} className="animate-pulse" /> Local-first · AI-assisted
-        </span>
+        
         <h1 style={delay(100)} className="tm-fade-up mx-auto mt-6 max-w-3xl text-5xl font-extrabold leading-[1.1] tracking-tight sm:text-6xl">
           Map your learning journey,{' '}
           <span
