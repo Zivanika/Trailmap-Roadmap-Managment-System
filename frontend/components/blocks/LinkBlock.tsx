@@ -2,6 +2,7 @@
 
 import type { LinkBlock } from '@/types'
 import { ExternalLink, Trash2 } from 'lucide-react'
+import { safeHref } from '@/lib/url'
 
 interface Props {
   block: LinkBlock
@@ -16,7 +17,7 @@ export function LinkBlockComponent({ block, onDelete }: Props) {
         <img src={block.favicon} alt="" className="h-4 w-4 shrink-0" />
       )}
       <a
-        href={block.url}
+        href={safeHref(block.url)}
         target="_blank"
         rel="noopener noreferrer"
         className="flex-1 min-w-0 text-sm text-blue-600 hover:underline truncate dark:text-blue-400"

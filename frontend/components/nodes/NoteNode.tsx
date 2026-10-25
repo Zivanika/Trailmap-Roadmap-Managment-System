@@ -8,6 +8,7 @@ import { useCanvasStore } from '@/store/canvas-store'
 import { useUIStore } from '@/store/ui-store'
 import { cn } from '@/lib/utils'
 import { InlineBlockList } from './InlineBlockList'
+import { OpenDetailsButton } from './node-parts'
 
 // Plain yellow sticky note: tan tape on top, folded corner at bottom-left.
 const FOLD = 26
@@ -22,7 +23,7 @@ function NoteNode({ data, id, selected }: NodeProps<CanvasNode>) {
   const blockCount = data.blocks.length
 
   return (
-    <div className={cn('relative w-[190px]', selected ? 'note-shadow-selected' : 'note-shadow')}>
+    <div className={cn('tm-pop-in relative w-[190px]', selected ? 'note-shadow-selected' : 'note-shadow')}>
 
       {/* ── Paper ───────────────────────────────────────────────────── */}
       <div
@@ -35,16 +36,19 @@ function NoteNode({ data, id, selected }: NodeProps<CanvasNode>) {
         }}
         onDoubleClick={() => { selectNode(id); openSidebar(id) }}
       >
-        {/* collapse chevron (only when there are resources) */}
-        {blockCount > 0 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v) }}
-            className="nodrag nopan absolute right-1.5 top-1.5 flex items-center gap-0.5 rounded px-1 py-0.5 text-yellow-900/45 hover:bg-black/5"
-          >
-            <span className="text-[10px] font-semibold">{blockCount}</span>
-            <ChevronDown size={11} className={cn('transition-transform duration-200', expanded && 'rotate-180')} />
-          </button>
-        )}
+        <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 text-yellow-900/45">
+          <OpenDetailsButton nodeId={id} />
+          {/* collapse chevron (only when there are resources) */}
+          {blockCount > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v) }}
+              className="nodrag nopan flex items-center gap-0.5 rounded px-1 py-0.5 hover:bg-black/5"
+            >
+              <span className="text-[10px] font-semibold">{blockCount}</span>
+              <ChevronDown size={11} className={cn('transition-transform duration-200', expanded && 'rotate-180')} />
+            </button>
+          )}
+        </div>
 
         {/* Note text — only the textarea is `nodrag`, so the surrounding
             padding stays a drag handle for moving the note. */}

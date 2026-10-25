@@ -34,6 +34,25 @@ async function reuploadBlobs(roadmap: LocalRoadmap): Promise<LocalRoadmap> {
 const DISMISSED_KEY = 'trailmap:migration-banner-dismissed'
 const MIGRATED_KEY = 'trailmap:migrated'
 
+/**
+ * Local roadmap id → its `updatedAt` when it was last synced. Per roadmap (it
+ * used to be one flag) so work done on this device after a sync is offered again.
+ */
+function readMigrated(locals: LocalRoadmap[]): Record<string, number> {
+  const raw = localStorage.getItem(MIGRATED_KEY)
+  if (raw === '1') {
+    // Old all-or-nothing flag: count what exists now as synced.
+    const migrated = Object.fromEntries(locals.map((r) => [r.id, r.updatedAt]))
+    localStorage.setItem(MIGRATED_KEY, JSON.stringify(migrated))
+    return migrated
+  }
+  try {
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {}
+  } catch {
+    return {}
+  }
+}
+
 export function MigrationBanner() {
   const { status } = useSession()
   const [dismissed, setDismissed] = useState(
@@ -42,10 +61,12 @@ export function MigrationBanner() {
   const [locals, setLocals] = useState<LocalRoadmap[]>([])
   const [state, setState] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
 
-  // Load non-empty local roadmaps once.
+  // Load non-empty local roadmaps that changed since they were last synced, once.
   useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem(MIGRATED_KEY) === '1') return
-    listRoadmaps().then((rows) => setLocals(rows.filter((r) => r.nodes.length > 0)))
+    listRoadmaps().then((rows) => {
+      const migrated = readMigrated(rows)
+      setLocals(rows.filter((r) => r.nodes.length > 0 && migrated[r.id] !== r.updatedAt))
+    })
   }, [])
 
   if (dismissed || locals.length === 0) return null
@@ -69,7 +90,9 @@ export function MigrationBanner() {
           edges: r.edges,
         })),
       )
-      localStorage.setItem(MIGRATED_KEY, '1')
+      const migrated = readMigrated([])
+      for (const r of locals) migrated[r.id] = r.updatedAt
+      localStorage.setItem(MIGRATED_KEY, JSON.stringify(migrated))
       setState('done')
     } catch {
       setState('error')
@@ -80,7 +103,7 @@ export function MigrationBanner() {
   const plural = count === 1 ? 'roadmap' : 'roadmaps'
 
   return (
-    <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-white/10 bg-neutral-900/95 px-4 py-2.5 text-sm shadow-xl backdrop-blur">
+    <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 animate-in fade-in-0 slide-in-from-bottom-4 duration-500 items-center gap-3 rounded-2xl border border-white/10 bg-neutral-900/95 px-4 py-2.5 text-sm shadow-xl backdrop-blur">
       <Cloud size={16} className="shrink-0 text-blue-400" />
 
       {status !== 'authenticated' ? (

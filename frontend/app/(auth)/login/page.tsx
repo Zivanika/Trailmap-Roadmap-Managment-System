@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -43,21 +44,27 @@ function AuthCard() {
 
   return (
     <main className="flex flex-1 items-center justify-center bg-gradient-to-br from-[#06130d] via-[#082016] to-[#0a2a1b] p-6">
-      <div className="relative flex min-h-[500px] w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-        {/* Green diagonal panel */}
+      <div className={`tm-fade-up relative flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:flex-row ${isDev ? 'sm:min-h-[500px]' : 'sm:min-h-[380px]'}`}>
+        {/* Green diagonal panel (a plain header band on phones) */}
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#157347] to-[#0c4a2c]"
+          className="pointer-events-none absolute inset-0 hidden bg-gradient-to-br from-[#157347] to-[#0c4a2c] sm:block"
           style={{ clipPath: 'polygon(0 0, 60% 0, 0 100%)' }}
         />
 
         {/* Left — welcome / toggle */}
-        <div className="relative z-10 flex w-1/2 flex-col justify-start gap-6 p-10 pt-16 text-white">
+        <div className="relative z-10 flex flex-col justify-start gap-6 bg-gradient-to-br from-[#157347] to-[#0c4a2c] p-8 text-white sm:w-1/2 sm:bg-none sm:p-10 sm:pt-16">
           <div>
-            <h2 className="text-4xl font-extrabold tracking-tight">
+            <h2 key={mode} className="tm-fade-up text-4xl font-extrabold tracking-tight">
               {isLogin ? 'Welcome!' : 'Hello!'}
             </h2>
             <p className="mt-3 text-sm font-semibold leading-relaxed text-white/90">
-              {isLogin ? (
+              {!isDev ? (
+                <>
+                  Sign in to save your roadmaps
+                  <br />
+                  and track your progress.
+                </>
+              ) : isLogin ? (
                 <>
                   Create your account.
                   <br />
@@ -72,50 +79,66 @@ function AuthCard() {
               )}
             </p>
           </div>
-          <button
-            onClick={() => { setMode(isLogin ? 'signup' : 'login'); setError(null) }}
-            className="w-fit rounded-full border-2 border-white px-8 py-2.5 text-sm font-bold text-white transition-colors hover:bg-white/15"
-          >
-            {isLogin ? 'Sign Up' : 'Sign In'}
-          </button>
+          {isDev && (
+            <button
+              onClick={() => { setMode(isLogin ? 'signup' : 'login'); setError(null) }}
+              className="w-fit rounded-full border-2 border-white px-8 py-2.5 text-sm font-bold text-white transition-colors hover:bg-white/15"
+            >
+              {isLogin ? 'Sign Up' : 'Sign In'}
+            </button>
+          )}
         </div>
 
         {/* Right — form */}
-        <div className="relative z-10 ml-auto flex w-1/2 flex-col justify-center p-10">
-          <h1 className="text-3xl font-semibold text-gray-700">{isLogin ? 'Login' : 'Sign Up'}</h1>
+        <div className="relative z-10 flex flex-col justify-center p-8 sm:ml-auto sm:w-1/2 sm:p-10">
+          <h1 className="text-3xl font-semibold text-gray-700">{!isDev || isLogin ? 'Sign in' : 'Sign Up'}</h1>
 
-          <form onSubmit={submit} className="mt-6 space-y-4">
-            {!isLogin && (
-              <Field label="Full name" value={name} onChange={setName} placeholder="Your name" type="text" required={false} />
-            )}
-            <Field label="Username/Email address" value={email} onChange={setEmail} placeholder="Username or Email" type="email" />
-            <Field label="Password" value={password} onChange={setPassword} placeholder="Password" type="password" />
+          {/* Email/password isn't wired to the backend yet, so production shows only
+              Google. The form stays for the dev provider. */}
+          {isDev && (
+            <>
+              <form onSubmit={submit} className="mt-6 space-y-4">
+                {!isLogin && (
+                  <Field label="Full name" value={name} onChange={setName} placeholder="Your name" type="text" required={false} />
+                )}
+                <Field label="Username/Email address" value={email} onChange={setEmail} placeholder="Username or Email" type="email" />
+                <Field label="Password" value={password} onChange={setPassword} placeholder="Password" type="password" />
 
-            {error && <p className="text-xs text-red-500">{error}</p>}
+                {error && <p className="text-xs text-red-500">{error}</p>}
 
-            <button
-              type="submit"
-              className="w-full rounded-full border-2 border-green-700 py-2.5 text-sm font-bold text-green-800 transition-colors hover:bg-green-50"
-            >
-              {isLogin ? 'Sign In' : 'Create account'}
-            </button>
-          </form>
+                <button
+                  type="submit"
+                  className="w-full rounded-full border-2 border-green-700 py-2.5 text-sm font-bold text-green-800 transition-colors hover:bg-green-50"
+                >
+                  {isLogin ? 'Sign In' : 'Create account'}
+                </button>
+              </form>
 
-          <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-gray-400">
-            <span className="h-px flex-1 bg-gray-200" />
-            or
-            <span className="h-px flex-1 bg-gray-200" />
-          </div>
+              <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-gray-400">
+                <span className="h-px flex-1 bg-gray-200" />
+                or
+                <span className="h-px flex-1 bg-gray-200" />
+              </div>
+            </>
+          )}
 
           <button
             onClick={() => signIn('google', { callbackUrl })}
-            className="flex w-full items-center justify-center gap-2.5 rounded-full border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className={`${isDev ? '' : 'mt-6 '}flex w-full items-center justify-center gap-2.5 rounded-full border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50`}
           >
             <GoogleIcon />
             Continue with Google
           </button>
 
-          {isLogin && (
+          {!isDev && (
+            <p className="mt-4 text-center text-xs text-gray-400">
+              Or{' '}
+              <Link href="/try" className="font-semibold text-green-700 hover:underline">
+                try the canvas without an account
+              </Link>
+            </p>
+          )}
+          {isDev && isLogin && (
             <p className="mt-4 cursor-pointer text-sm font-semibold text-green-700 hover:underline">
               Forgot password?
             </p>

@@ -27,6 +27,25 @@ export interface RoadmapSummary {
   counts?: { step: number; milestone: number; note: number; group: number }
 }
 
+export interface ProgressSummary {
+  /** Consecutive days (ending today or yesterday) with at least one step done. */
+  streak: number
+  doneToday: number
+  doneThisWeek: number
+  /** Steps completed on each of the last 7 days, oldest first; last entry is today. */
+  week: number[]
+  /** The most recently active roadmap that still has steps left, if any. */
+  resume: {
+    roadmapId: string
+    title: string
+    href: string
+    nextStep: string
+    totalSteps: number
+    doneSteps: number
+    lastActiveAt: string
+  } | null
+}
+
 export interface RoadmapFull extends RoadmapSummary {
   nodes: CanvasNode[]
   edges: CanvasEdge[]
@@ -158,6 +177,9 @@ export const api = {
     request<{ progress: { nodeId: string; status: ProgressStatus; completedAt: string | null }[] }>(
       `/progress/${roadmapId}`,
     ),
+
+  getProgressSummary: () =>
+    request<{ summary: ProgressSummary }>(`/progress/summary?tz=${new Date().getTimezoneOffset()}`),
 
   setProgress: (roadmapId: string, nodeId: string, status: ProgressStatus) =>
     request<{ progress: { nodeId: string; status: ProgressStatus; completedAt: string | null } }>(

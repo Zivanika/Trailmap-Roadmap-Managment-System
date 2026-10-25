@@ -5,6 +5,7 @@ import { api, type RoadmapSummary } from '@/lib/api-client'
 
 export const roadmapKeys = {
   all: ['roadmaps'] as const,
+  summary: ['progress-summary'] as const,
   detail: (id: string) => ['roadmap', id] as const,
 }
 
@@ -13,6 +14,18 @@ export function useRoadmaps() {
   return useQuery({
     queryKey: roadmapKeys.all,
     queryFn: async () => (await api.listRoadmaps()).roadmaps,
+    // Completion stats change in the editor without touching this cache.
+    refetchOnMount: 'always',
+  })
+}
+
+/** Streak, weekly activity and the roadmap to resume. Always refetched on mount, since
+ *  progress is toggled outside React Query (see progress-store). */
+export function useProgressSummary() {
+  return useQuery({
+    queryKey: roadmapKeys.summary,
+    queryFn: async () => (await api.getProgressSummary()).summary,
+    staleTime: 0,
   })
 }
 

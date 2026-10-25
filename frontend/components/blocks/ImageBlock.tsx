@@ -6,6 +6,7 @@ import { Trash2, ImageIcon } from 'lucide-react'
 import { db } from '@/lib/local-db'
 import { useCanvasStore } from '@/store/canvas-store'
 import { uploadToCloudinary } from '@/lib/upload'
+import { normalizeUrl } from '@/lib/url'
 
 interface Props {
   block: ImageBlock
@@ -62,7 +63,7 @@ export function ImageBlockComponent({ block, onChange, onDelete }: Props) {
   }
 
   function commitUrl() {
-    const trimmed = urlInput.trim()
+    const trimmed = normalizeUrl(urlInput)
     if (!trimmed) return
     onChange({ ...block, url: trimmed })
     setUrlInput('')

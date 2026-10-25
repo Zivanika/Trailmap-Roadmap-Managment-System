@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -142,4 +142,143 @@
   filter:
     drop-shadow(6px 10px 0px rgba(0,0,0,0.28))
     drop-shadow(0 6px 22px rgba(0,0,0,0.44));
+}
+/* ── Motion ───────────────────────────────────────────────────────────────
+   Small, purposeful animations shared across pages. Everything here is
+   switched off for people who ask for reduced motion (see the end of file).
+*/
+@keyframes tm-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes tm-pop-in {
+  0%   { opacity: 0; transform: scale(0.85); }
+  70%  { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes tm-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes tm-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes tm-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(4%, 3%, 0) scale(1.08); }
+}
+@keyframes tm-shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+@keyframes tm-check {
+  0%   { transform: scale(0.6) rotate(-12deg); }
+  60%  { transform: scale(1.25) rotate(0); }
+  100% { transform: scale(1); }
+}
+@keyframes tm-ripple {
+  from { opacity: 0.6; transform: scale(0.6); }
+  to   { opacity: 0; transform: scale(2.2); }
+}
+@keyframes tm-confetti {
+  0%   { opacity: 1; transform: translate3d(0, 0, 0) rotate(0); }
+  100% { opacity: 0; transform: translate3d(var(--tm-x), var(--tm-y), 0) rotate(var(--tm-r)); }
+}
+@keyframes tm-fill {
+  from { transform: scaleX(0); }
+}
+@keyframes tm-grow {
+  from { transform: scaleY(0); }
+}
+@keyframes tm-glow {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.025); }
+}
+
+/* Entrance on mount; stagger with style={{ '--tm-delay': '120ms' }}.
+   `backwards` fill so no transform lingers afterwards: a leftover transform
+   creates a stacking context that would clip dropdowns inside the element. */
+.tm-fade-up {
+  animation: tm-fade-up 600ms cubic-bezier(0.22, 1, 0.36, 1) var(--tm-delay, 0ms) backwards;
+}
+.tm-pop-in {
+  animation: tm-pop-in 450ms cubic-bezier(0.22, 1, 0.36, 1) var(--tm-delay, 0ms) backwards;
+}
+.tm-float {
+  animation: tm-float 5s ease-in-out var(--tm-delay, 0ms) infinite;
+}
+.tm-drift {
+  animation: tm-drift 18s ease-in-out infinite;
+}
+.tm-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tm-draw 1.4s cubic-bezier(0.65, 0, 0.35, 1) var(--tm-delay, 0ms) forwards;
+}
+.tm-check {
+  animation: tm-check 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tm-ripple {
+  animation: tm-ripple 600ms ease-out forwards;
+}
+.tm-fill {
+  transform-origin: left;
+  animation: tm-fill 1.2s cubic-bezier(0.22, 1, 0.36, 1) var(--tm-delay, 0ms) backwards;
+}
+.tm-grow {
+  transform-origin: bottom;
+  animation: tm-grow 700ms cubic-bezier(0.22, 1, 0.36, 1) var(--tm-delay, 0ms) backwards;
+}
+.tm-glow {
+  animation: tm-glow 2.4s ease-in-out infinite;
+}
+.tm-skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: tm-shimmer 1.6s linear infinite;
+}
+
+/* Scroll reveal, toggled by <Reveal>. */
+.tm-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1) var(--tm-delay, 0ms),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1) var(--tm-delay, 0ms);
+}
+.tm-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Lift on hover for cards. */
+.tm-lift {
+  transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1), border-color 200ms, background-color 200ms;
+}
+.tm-lift:hover {
+  transform: translateY(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin),
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .tm-reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .tm-lift:hover {
+    transform: none;
+  }
+  /* SMIL motion in the hero illustration isn't covered by the rules above. */
+  .tm-motion-only {
+    display: none;
+  }
 }

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { Plus, Trash2, ExternalLink, Play, X, ChevronLeft } from 'lucide-react'
 import { useCanvasStore } from '@/store/canvas-store'
 import { api } from '@/lib/api-client'
+import { normalizeUrl, safeHref } from '@/lib/url'
 import type { ContentBlock, NodeData, TextBlock, ChecklistBlock, ImageBlock } from '@/types'
 import { TextBlockComponent } from '@/components/blocks/TextBlock'
 import { ChecklistBlockComponent } from '@/components/blocks/ChecklistBlock'
@@ -47,7 +48,7 @@ function BlockRow({
           ? <img src={block.favicon} alt="" className="h-3.5 w-3.5 shrink-0 rounded-sm" /> // eslint-disable-line @next/next/no-img-element
           : <ExternalLink size={12} className="shrink-0 text-blue-400" />}
         <a
-          href={block.url}
+          href={safeHref(block.url)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex-1 min-w-0 truncate text-blue-600 dark:text-blue-400 hover:underline font-medium"
@@ -189,7 +190,7 @@ export function InlineBlockList({ nodeId, data }: Props) {
   }
 
   function commitLink() {
-    const url = urlVal.trim()
+    const url = normalizeUrl(urlVal)
     if (!url) return
     let favicon: string | undefined
     try { favicon = `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=16` } catch {}
@@ -198,7 +199,7 @@ export function InlineBlockList({ nodeId, data }: Props) {
   }
 
   function commitVideo() {
-    const url = urlVal.trim()
+    const url = normalizeUrl(urlVal)
     if (!url) return
     const blockId = crypto.randomUUID()
     patch([...data.blocks, { id: blockId, type: 'video', url, title: 'YouTube video' }])

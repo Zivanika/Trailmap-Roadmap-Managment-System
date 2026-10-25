@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
 import { InlineBlockList } from './InlineBlockList'
 import { PeelCorner } from './PeelCorner'
 import { NodeDoneToggle, useNodeDone } from './NodeDoneToggle'
+import { LockedIcon, NextUpGlow, OpenDetailsButton, formatEstimate, pathDimClass } from './node-parts'
+import { useNodePathStatus } from '@/hooks/use-path-state'
 
 const FOLD = 38
 
@@ -28,9 +30,10 @@ function MilestoneNode({ data, id, selected }: NodeProps<CanvasNode>) {
 
   const blockCount = data.blocks.length
   const { done } = useNodeDone(id)
+  const path = useNodePathStatus(id)
 
   return (
-    <div className={cn('relative w-[220px] transition-opacity', done && 'opacity-60', selected ? 'note-shadow-selected' : 'note-shadow')}>
+    <div className={cn('tm-pop-in relative w-[220px] transition-opacity', pathDimClass(path, done), selected ? 'note-shadow-selected' : 'note-shadow')}>
 
       {/* ── Main card ───────────────────────────────────────────────── */}
       <div
@@ -52,16 +55,20 @@ function MilestoneNode({ data, id, selected }: NodeProps<CanvasNode>) {
           onClick={() => setExpanded((e) => !e)}
           onDoubleClick={() => { selectNode(id); openSidebar(id) }}
         >
-          <div className="flex items-center gap-1.5 text-xs font-medium text-amber-950/55">
+          <div className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-amber-950/55">
             <NodeDoneToggle nodeId={id} className="text-amber-950" />
             <span className="text-sm leading-none">🏆</span>
             <span>Milestone</span>
-            {data.estMinutes && <span>· ~{data.estMinutes}m</span>}
+            {data.estMinutes && <span>· {formatEstimate(data.estMinutes)}</span>}
+            {path === 'locked' && <LockedIcon />}
           </div>
-          <ChevronDown
-            size={14}
-            className={cn('text-amber-950/45 transition-transform duration-200', expanded && 'rotate-180')}
-          />
+          <div className="flex items-center gap-1">
+            <OpenDetailsButton nodeId={id} className="text-amber-950/45" />
+            <ChevronDown
+              size={14}
+              className={cn('text-amber-950/45 transition-transform duration-200', expanded && 'rotate-180')}
+            />
+          </div>
         </div>
 
         {/* Title */}
@@ -105,6 +112,8 @@ function MilestoneNode({ data, id, selected }: NodeProps<CanvasNode>) {
 
       {/* Peeling corner */}
       <PeelCorner size={FOLD} back="#C4980A" />
+
+      {path === 'next' && <NextUpGlow />}
 
       {selected && (
         <div className="pointer-events-none absolute inset-0 rounded-[3px] ring-2 ring-inset ring-amber-600/70" />

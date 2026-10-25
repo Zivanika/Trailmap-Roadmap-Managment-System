@@ -5,6 +5,8 @@ import type { RoadmapFull } from '@/lib/api-client'
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:4000'
 
+// Called from both generateMetadata and the page; Next memoizes identical GET
+// fetches within one request, so the backend (and viewCount) sees one hit.
 async function fetchRoadmap(slug: string): Promise<RoadmapFull | null> {
   const res = await fetch(`${BACKEND_URL}/api/r/${slug}`, { cache: 'no-store' })
   if (!res.ok) return null
@@ -19,7 +21,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params
   const roadmap = await fetchRoadmap(slug)
-  return { title: roadmap ? `${roadmap.title} · Trailmap` : 'Trailmap' }
+  if (!roadmap) return { title: 'Roadmap not found', robots: { index: false } }
+  const steps = (roadmap.nodes ?? []).filter((n) => n.type === 'step' || n.type === 'milestone').length
+  const description =
+    roadmap.description || `A ${steps}-step learning roadmap on Trailmap. Follow it, or fork it into your own.`
+  // The root layout's title template adds " · Trailmap" to the page title;
+  // OG/Twitter titles don't go through the template, so they carry it themselves.
+  const shareTitle = `${roadmap.title} · Trailmap`
+  return {
+    title: roadmap.title,
+    description,
+    alternates: { canonical: `/r/${slug}` },
+    openGraph: { title: shareTitle, description, type: 'article', url: `/r/${slug}` },
+    twitter: { card: 'summary_large_image', title: shareTitle, description },
+  }
 }
 
 export default async function PublicRoadmapPage({

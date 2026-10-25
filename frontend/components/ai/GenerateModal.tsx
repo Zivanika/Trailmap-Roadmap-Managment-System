@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { Sparkles, X, Loader2 } from 'lucide-react'
 import { api, ApiError } from '@/lib/api-client'
 import { useCanvasStore } from '@/store/canvas-store'
-import type { CanvasNode, CanvasEdge } from '@/types'
+import { useUIStore } from '@/store/ui-store'
 
 const LEVELS = ['beginner', 'intermediate', 'advanced'] as const
 
@@ -18,33 +18,14 @@ export function GenerateModal({ open, onClose }: { open: boolean; onClose: () =>
 
   if (!open) return null
 
-  function materialize(gen: { nodes: CanvasNode[]; edges: CanvasEdge[] }) {
-    const { nodes: existing, edges: existingEdges, setNodes, setEdges } = useCanvasStore.getState()
-    const offsetX = existing.length ? Math.max(...existing.map((n) => n.position.x)) + 340 : 0
-
-    const idMap = new Map<string, string>()
-    const newNodes: CanvasNode[] = gen.nodes.map((n) => {
-      const id = crypto.randomUUID()
-      idMap.set(n.id, id)
-      return { ...n, id, position: { x: n.position.x + offsetX, y: n.position.y } }
-    })
-    const newEdges: CanvasEdge[] = gen.edges.map((e) => ({
-      id: crypto.randomUUID(),
-      source: idMap.get(e.source) ?? e.source,
-      target: idMap.get(e.target) ?? e.target,
-    }))
-
-    setNodes([...existing, ...newNodes])
-    setEdges([...existingEdges, ...newEdges])
-  }
-
   async function handleGenerate() {
     if (goal.trim().length < 3) return
     setLoading(true)
     setError(null)
     try {
       const gen = await api.generateRoadmap({ goal: goal.trim(), level, timeBudget: timeBudget.trim() || undefined })
-      materialize(gen)
+      useCanvasStore.getState().insertGraph(gen)
+      useUIStore.getState().requestFitView()
       onClose()
       setGoal('')
       setTimeBudget('')
@@ -68,14 +49,14 @@ export function GenerateModal({ open, onClose }: { open: boolean; onClose: () =>
       className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
       onMouseDown={onClose}
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in-0 duration-200" />
       <div
-        className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-2xl"
+        className="relative w-full max-w-md overflow-hidden rounded-2xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200 border border-white/10 bg-neutral-900 shadow-2xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-3.5">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <Sparkles size={16} className="text-violet-400" />
+            <Sparkles size={16} className="animate-pulse text-violet-400" />
             Generate a roadmap with AI
           </h3>
           <button onClick={onClose} className="rounded-md p-1 text-white/40 hover:bg-white/10 hover:text-white">

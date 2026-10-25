@@ -53,7 +53,7 @@ export function UserMenu() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-50 w-56 overflow-hidden rounded-xl border border-white/10 bg-neutral-900 shadow-2xl">
+          <div className="absolute right-0 top-11 z-50 w-56 origin-top-right overflow-hidden rounded-xl animate-in fade-in-0 zoom-in-95 duration-150 border border-white/10 bg-neutral-900 shadow-2xl">
             <div className="flex items-center gap-2 border-b border-white/10 px-3 py-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70">
                 <UserIcon size={16} />

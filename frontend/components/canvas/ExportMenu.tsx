@@ -106,7 +106,7 @@ export function ExportMenu({ title }: { title: string }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-9 z-50 w-40 overflow-hidden rounded-xl border border-white/10 bg-neutral-900 shadow-2xl">
+          <div className="absolute right-0 top-9 z-50 w-40 origin-top-right overflow-hidden rounded-xl animate-in fade-in-0 zoom-in-95 duration-150 border border-white/10 bg-neutral-900 shadow-2xl">
             <ExportItem icon={ImageIcon} label="PNG image" onClick={() => run(exportPng)} />
             <ExportItem icon={FileText} label="PDF" onClick={() => run(exportPdf)} />
             <ExportItem icon={FileJson} label="JSON" onClick={() => run(exportJson)} />

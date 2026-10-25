@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
 import { InlineBlockList } from './InlineBlockList'
 import { PeelCorner } from './PeelCorner'
 import { NodeDoneToggle, useNodeDone } from './NodeDoneToggle'
+import { LockedIcon, NextUpGlow, OpenDetailsButton, formatEstimate, pathDimClass } from './node-parts'
+import { useNodePathStatus } from '@/hooks/use-path-state'
 
 /**
  * Each colour entry:
@@ -89,6 +91,7 @@ function StepNode({ data, id, selected }: NodeProps<CanvasNode>) {
   const s = STICKY[data.color ?? 'blue'] ?? STICKY.blue
   const blockCount = data.blocks.length
   const { done } = useNodeDone(id)
+  const path = useNodePathStatus(id)
 
   return (
     /**
@@ -96,7 +99,7 @@ function StepNode({ data, id, selected }: NodeProps<CanvasNode>) {
      *  – carries the drop-shadow filter (follows the pentagon clip path)
      *  – hosts the fold triangles as absolutely-positioned siblings
      */
-    <div className={cn('relative w-[220px] transition-opacity', done && 'opacity-60', selected ? 'note-shadow-selected' : 'note-shadow')}>
+    <div className={cn('tm-pop-in relative w-[220px] transition-opacity', pathDimClass(path, done), selected ? 'note-shadow-selected' : 'note-shadow')}>
 
       {/* ── Main card ───────────────────────────────────────────────── */}
       <div
@@ -119,16 +122,20 @@ function StepNode({ data, id, selected }: NodeProps<CanvasNode>) {
           onClick={() => setExpanded((e) => !e)}
           onDoubleClick={() => { selectNode(id); openSidebar(id) }}
         >
-          <div className={cn('flex items-center gap-1.5 text-xs font-medium', s.meta)}>
+          <div className={cn('flex items-center gap-1.5 whitespace-nowrap text-xs font-medium', s.meta)}>
             <NodeDoneToggle nodeId={id} className={s.text} />
             <span className="text-sm leading-none">📍</span>
             <span>Step</span>
-            {data.estMinutes && <span>· ~{data.estMinutes}m</span>}
+            {data.estMinutes && <span>· {formatEstimate(data.estMinutes)}</span>}
+            {path === 'locked' && <LockedIcon />}
           </div>
-          <ChevronDown
-            size={14}
-            className={cn(s.meta, 'transition-transform duration-200', expanded && 'rotate-180')}
-          />
+          <div className="flex items-center gap-1">
+            <OpenDetailsButton nodeId={id} className={s.meta} />
+            <ChevronDown
+              size={14}
+              className={cn(s.meta, 'transition-transform duration-200', expanded && 'rotate-180')}
+            />
+          </div>
         </div>
 
         {/* ── Title ────────────────────────────────────────────────── */}
@@ -172,6 +179,8 @@ function StepNode({ data, id, selected }: NodeProps<CanvasNode>) {
 
       {/* ── Peeling corner (curled underside of the sheet) ──────────── */}
       <PeelCorner size={FOLD} back={s.fold} />
+
+      {path === 'next' && <NextUpGlow />}
 
       {/* Selection ring — rendered as a border on a full-size overlay */}
       {selected && (
