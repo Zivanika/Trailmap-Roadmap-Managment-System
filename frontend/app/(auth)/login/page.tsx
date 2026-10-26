@@ -124,7 +124,7 @@ function AuthCard() {
 
           <button
             onClick={() => signIn('google', { callbackUrl })}
-            className={`${isDev ? '' : 'mt-6 '}flex w-full items-center justify-center gap-2.5 rounded-full border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50`}
+            className={`${isDev ? '' : 'mt-6 '}flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-full border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50`}
           >
             <GoogleIcon />
             Continue with Google

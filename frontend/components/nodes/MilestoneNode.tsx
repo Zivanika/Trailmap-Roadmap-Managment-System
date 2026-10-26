@@ -87,9 +87,13 @@ function MilestoneNode({ data, id, selected }: NodeProps<CanvasNode>) {
             )}
           />
           {blockCount > 0 && !expanded && (
-            <p className="mt-1 text-[11px] font-medium text-amber-950/50">
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="mt-1 cursor-pointer text-[11px] font-medium text-amber-950/50 hover:underline"
+            >
               ▼ {blockCount} resource{blockCount !== 1 ? 's' : ''}
-            </p>
+            </button>
           )}
         </div>
 
