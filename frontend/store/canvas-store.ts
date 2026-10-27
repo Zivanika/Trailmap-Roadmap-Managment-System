@@ -28,6 +28,12 @@ interface CanvasState {
   isDirty: boolean
   /** The last autosave failed (it's being retried). */
   saveFailed: boolean
+  /** Server graph version this canvas was loaded from or last saved as (cloud only). */
+  version: number | null
+  /** A save was refused because the roadmap changed elsewhere; saving pauses until resolved. */
+  conflict: boolean
+  /** Where this canvas lives: drives which tools are offered (AI needs the cloud). */
+  mode: 'local' | 'cloud' | 'readonly'
 
   setRoadmapId: (id: string) => void
   setNodes: (nodes: CanvasNode[]) => void
@@ -45,6 +51,11 @@ interface CanvasState {
   /** Flags the graph for saving after a change made outside the actions here (undo/redo). */
   markDirty: () => void
   setSaveFailed: (failed: boolean) => void
+  setVersion: (version: number | null) => void
+  setConflict: (conflict: boolean) => void
+  setMode: (mode: CanvasState['mode']) => void
+  /** Adds a node with an edge from `fromId`, as one undo step. */
+  addConnectedNode: (fromId: string, node: CanvasNode) => void
   loadRoadmap: (nodes: CanvasNode[], edges: CanvasEdge[]) => void
 }
 export const useCanvasStore = create<CanvasState>()( 
@@ -66,6 +77,9 @@ export const useCanvasStore = create<CanvasState>()(
       selectedNodeId: null,
       isDirty: false,
       saveFailed: false,
+      version: null,
+      conflict: false,
+      mode: 'local',
 
       setRoadmapId: (id) => set({ roadmapId: id }),
 
@@ -138,7 +152,20 @@ export const useCanvasStore = create<CanvasState>()(
 
       setSaveFailed: (failed) => set({ saveFailed: failed }),
 
-      loadRoadmap: (nodes, edges) => set({ nodes, edges, isDirty: false, saveFailed: false }),
+      setVersion: (version) => set({ version }),
+
+      setConflict: (conflict) => set({ conflict }),
+
+      setMode: (mode) => set({ mode }),
+
+      addConnectedNode: (fromId, node) =>
+        set((state) => ({
+          nodes: [...state.nodes, node],
+          edges: [...state.edges, { id: crypto.randomUUID(), source: fromId, target: node.id }],
+          isDirty: true,
+        })),
+
+      loadRoadmap: (nodes, edges) => set({ nodes, edges, isDirty: false, saveFailed: false, conflict: false }),
       }
     },
     {

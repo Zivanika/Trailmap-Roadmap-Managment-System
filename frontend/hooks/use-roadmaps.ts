@@ -6,6 +6,7 @@ import { api, type RoadmapSummary } from '@/lib/api-client'
 export const roadmapKeys = {
   all: ['roadmaps'] as const,
   summary: ['progress-summary'] as const,
+  following: ['following'] as const,
   detail: (id: string) => ['roadmap', id] as const,
 }
 
@@ -26,6 +27,26 @@ export function useProgressSummary() {
     queryKey: roadmapKeys.summary,
     queryFn: async () => (await api.getProgressSummary()).summary,
     staleTime: 0,
+  })
+}
+
+/** Shared roadmaps the user follows, with their progress. */
+export function useFollowing() {
+  return useQuery({
+    queryKey: roadmapKeys.following,
+    queryFn: async () => (await api.listFollowing()).roadmaps,
+    refetchOnMount: 'always',
+  })
+}
+
+export function useUnfollow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.setFollow(id, false),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: roadmapKeys.following })
+      qc.invalidateQueries({ queryKey: roadmapKeys.summary })
+    },
   })
 }
 
@@ -54,9 +75,11 @@ export function useDeleteRoadmap() {
   })
 }
 
-export function useUpdateRoadmap() {
+/** `quiet`: the caller shows the error itself, so skip the global error toast. */
+export function useUpdateRoadmap({ quiet = false }: { quiet?: boolean } = {}) {
   const qc = useQueryClient()
   return useMutation({
+    meta: quiet ? { quiet: true } : undefined,
     mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof api.updateRoadmap>[1] }) =>
       api.updateRoadmap(id, patch),
     onSuccess: (_data, { id }) => {

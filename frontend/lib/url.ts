@@ -20,3 +20,10 @@ export function safeHref(url: string | undefined): string | undefined {
     return undefined
   }
 }
+
+/** Where to search for an AI resource idea: YouTube for videos, the web for the rest. */
+export function resourceSearchUrl(kind: string, query: string) {
+  return kind === 'video'
+    ? `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
+    : `https://www.google.com/search?q=${encodeURIComponent(query)}`
+}

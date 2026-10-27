@@ -40,6 +40,9 @@ model Roadmap {
   tags        String[]
   coverUrl    String?    @map("cover_url")
   viewCount   Int        @default(0) @map("view_count")
+  /// Bumped on every graph save; a save based on an older version is rejected
+  /// so two tabs or devices can't silently overwrite each other.
+  version     Int        @default(0)
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
@@ -127,10 +130,11 @@ model RoadmapFollow {
   roadmapId String   @map("roadmap_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  user    User    @relation(fields: [userId], references: [id])
-  roadmap Roadmap @relation(fields: [roadmapId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmap Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
 
   @@id([userId, roadmapId])
+  @@index([roadmapId])
   @@map("roadmap_follows")
 }
 
@@ -141,14 +145,16 @@ model AiGeneration {
   kind       AiKind
   promptHash String   @map("prompt_hash")
   prompt     String
-  response   Json
+  /// Null while the request is still running: the row is written first so it
+  /// counts toward the daily limit straight away.
+  response   Json?
   tokenIn    Int?     @map("token_in")
   tokenOut   Int?     @map("token_out")
   costUsd    Decimal? @map("cost_usd") @db.Decimal(10, 6)
   createdAt  DateTime @default(now()) @map("created_at")
 
   user    User?    @relation(fields: [userId], references: [id])
-  roadmap Roadmap? @relation(fields: [roadmapId], references: [id])
+  roadmap Roadmap? @relation(fields: [roadmapId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([promptHash])
@@ -160,4 +166,17 @@ enum AiKind {
   suggest_next
   find_resource
   summarize
+}
+
+/// One-time sign-in links sent by email. Only a hash of the token is stored.
+model MagicLinkToken {
+  id        String    @id @default(uuid())
+  email     String
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([email, createdAt])
+  @@map("magic_link_tokens")
 }

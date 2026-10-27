@@ -19,6 +19,12 @@ export interface RoadmapSummary {
   tags: string[]
   coverUrl?: string
   viewCount: number
+  /** Graph version; a save must name the version it was built on. */
+  version?: number
+  /** Featured in the template gallery. */
+  isTemplate?: boolean
+  /** The signed-in user is an admin and may feature it as a template (owner endpoints only). */
+  canFeature?: boolean
   createdAt: string
   updatedAt: string
   /** Completion stats + per-type node counts (present on the list endpoint). */
@@ -44,6 +50,55 @@ export interface ProgressSummary {
     doneSteps: number
     lastActiveAt: string
   } | null
+}
+
+export interface FollowedRoadmap {
+  id: string
+  title: string
+  description?: string
+  shareSlug: string
+  visibility: Visibility
+  tags: string[]
+  viewCount: number
+  updatedAt: string
+  followedAt: string
+  totalSteps: number
+  doneSteps: number
+}
+
+export interface StepSuggestion {
+  type: 'step' | 'milestone'
+  title: string
+  description: string | null
+  estMinutes: number | null
+}
+
+export interface ResourceIdea {
+  kind: 'video' | 'article' | 'docs' | 'course' | 'practice'
+  title: string
+  query: string
+}
+
+export interface YouTubeMeta {
+  kind: 'video' | 'playlist'
+  title: string
+  thumbnail: string
+  author: string
+  duration?: string
+  itemCount?: number
+}
+
+export interface ExploreItem {
+  title: string
+  description?: string
+  tags: string[]
+  shareSlug: string
+  viewCount: number
+  forkCount: number
+  steps: number
+  milestones: number
+  isTemplate: boolean
+  updatedAt: string
 }
 
 export interface RoadmapFull extends RoadmapSummary {
@@ -78,7 +133,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 /** Strip React Flow runtime fields; keep only what the backend persists. */
-function serializeGraph(nodes: CanvasNode[], edges: CanvasEdge[]) {
+export function serializeGraph(nodes: CanvasNode[], edges: CanvasEdge[]) {
   // Dedupe by id so a stray duplicate can't trigger a PK collision on save.
   const uniqNodes = [...new Map(nodes.map((n) => [n.id, n])).values()]
   const uniqEdges = [...new Map(edges.map((e) => [e.id, e])).values()]
@@ -115,7 +170,7 @@ export const api = {
 
   updateRoadmap: (
     id: string,
-    patch: Partial<Pick<RoadmapSummary, 'title' | 'description' | 'tags' | 'visibility' | 'coverUrl'>>,
+    patch: Partial<Pick<RoadmapSummary, 'title' | 'description' | 'tags' | 'visibility' | 'coverUrl' | 'isTemplate'>>,
   ) =>
     request<{ roadmap: RoadmapSummary }>(`/roadmaps/${id}`, {
       method: 'PATCH',
@@ -125,10 +180,21 @@ export const api = {
   deleteRoadmap: (id: string) =>
     request<void>(`/roadmaps/${id}`, { method: 'DELETE' }),
 
-  saveGraph: (id: string, nodes: CanvasNode[], edges: CanvasEdge[]) =>
-    request<{ ok: boolean; nodeCount: number; edgeCount: number }>(
+  /**
+   * Replaces the whole graph. `baseVersion` is the version it was loaded from:
+   * a 409 means someone saved since (another tab or device). `force` overwrites.
+   */
+  saveGraph: (id: string, nodes: CanvasNode[], edges: CanvasEdge[], opts: { baseVersion?: number | null; force?: boolean } = {}) =>
+    request<{ ok: boolean; nodeCount: number; edgeCount: number; version: number }>(
       `/roadmaps/${id}/graph`,
-      { method: 'PATCH', body: JSON.stringify(serializeGraph(nodes, edges)) },
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          ...serializeGraph(nodes, edges),
+          ...(opts.baseVersion != null ? { baseVersion: opts.baseVersion } : {}),
+          ...(opts.force ? { force: true } : {}),
+        }),
+      },
     ),
 
   importRoadmaps: (
@@ -168,10 +234,35 @@ export const api = {
       uploadUrl: string
     }>('/uploads/sign', { method: 'POST' }),
 
-  youtubeMetadata: (url: string) =>
-    request<{ title: string; thumbnail: string; author: string }>(
-      `/youtube/metadata?url=${encodeURIComponent(url)}`,
-    ),
+  youtubeMetadata: (url: string) => request<YouTubeMeta>(`/youtube/metadata?url=${encodeURIComponent(url)}`),
+
+  suggestNext: (roadmapId: string, nodeId: string, title: string) =>
+    request<{ suggestions: StepSuggestion[]; cached: boolean }>('/ai/suggest-next', {
+      method: 'POST',
+      body: JSON.stringify({ roadmapId, nodeId, title }),
+    }),
+
+  findResources: (roadmapId: string, nodeId: string, title: string) =>
+    request<{ resources: ResourceIdea[]; cached: boolean }>('/ai/find-resources', {
+      method: 'POST',
+      body: JSON.stringify({ roadmapId, nodeId, title }),
+    }),
+
+  listFollowing: () => request<{ roadmaps: FollowedRoadmap[] }>('/roadmaps/following'),
+
+  followStatus: (id: string) => request<{ following: boolean; followers: number; isOwner: boolean }>(`/roadmaps/${id}/follow`),
+
+  setFollow: (id: string, following: boolean) =>
+    request<{ following: boolean; followers: number }>(`/roadmaps/${id}/follow`, { method: following ? 'POST' : 'DELETE' }),
+
+  requestMagicLink: (email: string, callbackUrl?: string) =>
+    request<{ ok: true }>('/auth/magic-link', { method: 'POST', body: JSON.stringify({ email, callbackUrl }) }),
+
+  /** Public: templates featured in the gallery. */
+  listTemplates: () => request<{ roadmaps: ExploreItem[] }>('/explore?templates=1&sort=popular'),
+
+  /** Public: a shared roadmap's graph, without counting a view. */
+  getSharedGraph: (slug: string) => request<{ roadmap: RoadmapFull }>(`/r/${encodeURIComponent(slug)}?preview=1`),
 
   getProgress: (roadmapId: string) =>
     request<{ progress: { nodeId: string; status: ProgressStatus; completedAt: string | null }[] }>(

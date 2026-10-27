@@ -154,13 +154,9 @@ function StepNode({ data, id, selected }: NodeProps<CanvasNode>) {
             )}
           />
           {blockCount > 0 && !expanded && (
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              className={cn('mt-1 cursor-pointer text-[11px] font-medium hover:underline', s.meta)}
-            >
+            <p className={cn('mt-1 text-[11px] font-medium', s.meta)}>
               ▼ {blockCount} resource{blockCount !== 1 ? 's' : ''}
-            </button>
+            </p>
           )}
         </div>
 

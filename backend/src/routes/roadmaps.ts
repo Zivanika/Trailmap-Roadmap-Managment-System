@@ -5,9 +5,10 @@ import { requireAuth } from '../middleware/auth'
 import {
   createRoadmapSchema,
   updateRoadmapSchema,
-  graphSchema,
+  graphSaveSchema,
   importSchema,
 } from '../lib/validators'
+import { isAdmin } from '../lib/admin'
 import { hasCycle } from '../lib/dag'
 import { makeShareSlug } from '../lib/slug'
 import { serializeRoadmap } from '../lib/serialize'
@@ -143,6 +144,98 @@ router.post('/import', async (req, res, next) => {
   }
 })
 
+/**
+ * GET /api/roadmaps/following — shared roadmaps the user follows, with their
+ * progress on each. Declared before /:id so "following" isn't read as an id.
+ * One the owner has made private again drops out of the list (the follow is kept).
+ */
+router.get('/following', async (req, res, next) => {
+  try {
+    const userId = req.user!.id
+    const follows = await prisma.roadmapFollow.findMany({
+      where: { userId, roadmap: { visibility: { not: 'private' }, shareSlug: { not: null } } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        createdAt: true,
+        roadmap: { select: { id: true, title: true, description: true, shareSlug: true, visibility: true, tags: true, viewCount: true, updatedAt: true } },
+      },
+    })
+    const ids = follows.map((f) => f.roadmap.id)
+    const [trackable, done] = await Promise.all([
+      ids.length
+        ? prisma.node.groupBy({ by: ['roadmapId'], where: { roadmapId: { in: ids }, type: { in: ['step', 'milestone'] } }, _count: { _all: true } })
+        : [],
+      ids.length
+        ? prisma.nodeProgress.groupBy({ by: ['roadmapId'], where: { userId, roadmapId: { in: ids }, status: 'done' }, _count: { _all: true } })
+        : [],
+    ])
+    const totalOf = new Map(trackable.map((t) => [t.roadmapId, t._count._all]))
+    const doneOf = new Map(done.map((d) => [d.roadmapId, d._count._all]))
+    res.json({
+      roadmaps: follows.map(({ roadmap: r, createdAt }) => {
+        const totalSteps = totalOf.get(r.id) ?? 0
+        return {
+          ...r,
+          description: r.description ?? undefined,
+          followedAt: createdAt,
+          totalSteps,
+          doneSteps: Math.min(doneOf.get(r.id) ?? 0, totalSteps),
+        }
+      }),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** Loads a roadmap someone other than its owner may follow: shared, and not their own. */
+async function followable(id: string, userId: string) {
+  const roadmap = await prisma.roadmap.findUnique({ where: { id }, select: { ownerId: true, visibility: true } })
+  if (!roadmap || roadmap.visibility === 'private') return { status: 404 as const, error: 'Not found' }
+  if (roadmap.ownerId === userId) return { status: 400 as const, error: 'You can’t follow your own roadmap' }
+  return null
+}
+
+/** GET /api/roadmaps/:id/follow — whether the user follows it (or owns it), and how many people do. */
+router.get('/:id/follow', async (req, res, next) => {
+  try {
+    const [mine, followers, roadmap] = await Promise.all([
+      prisma.roadmapFollow.findUnique({ where: { userId_roadmapId: { userId: req.user!.id, roadmapId: req.params.id } } }),
+      prisma.roadmapFollow.count({ where: { roadmapId: req.params.id } }),
+      prisma.roadmap.findUnique({ where: { id: req.params.id }, select: { ownerId: true } }),
+    ])
+    res.json({ following: Boolean(mine), followers, isOwner: roadmap?.ownerId === req.user!.id })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** POST /api/roadmaps/:id/follow — follow a shared roadmap (idempotent). */
+router.post('/:id/follow', async (req, res, next) => {
+  try {
+    const problem = await followable(req.params.id, req.user!.id)
+    if (problem) return res.status(problem.status).json({ error: problem.error })
+    await prisma.roadmapFollow.upsert({
+      where: { userId_roadmapId: { userId: req.user!.id, roadmapId: req.params.id } },
+      create: { userId: req.user!.id, roadmapId: req.params.id },
+      update: {},
+    })
+    res.json({ following: true, followers: await prisma.roadmapFollow.count({ where: { roadmapId: req.params.id } }) })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** DELETE /api/roadmaps/:id/follow — unfollow (idempotent). */
+router.delete('/:id/follow', async (req, res, next) => {
+  try {
+    await prisma.roadmapFollow.deleteMany({ where: { userId: req.user!.id, roadmapId: req.params.id } })
+    res.json({ following: false, followers: await prisma.roadmapFollow.count({ where: { roadmapId: req.params.id } }) })
+  } catch (err) {
+    next(err)
+  }
+})
+
 /** GET /api/roadmaps/:id — full roadmap with nodes + edges (owner only). */
 router.get('/:id', async (req, res, next) => {
   try {
@@ -152,7 +245,7 @@ router.get('/:id', async (req, res, next) => {
     })
     if (!roadmap) return res.status(404).json({ error: 'Not found' })
     if (roadmap.ownerId !== req.user!.id) return res.status(403).json({ error: 'Forbidden' })
-    res.json({ roadmap: serializeRoadmap(roadmap) })
+    res.json({ roadmap: { ...serializeRoadmap(roadmap), canFeature: isAdmin(req.user!.email) } })
   } catch (err) {
     next(err)
   }
@@ -165,6 +258,9 @@ router.patch('/:id', async (req, res, next) => {
     const existing = await prisma.roadmap.findUnique({ where: { id: req.params.id } })
     if (!existing) return res.status(404).json({ error: 'Not found' })
     if (existing.ownerId !== req.user!.id) return res.status(403).json({ error: 'Forbidden' })
+    if (body.isTemplate !== undefined && body.isTemplate !== existing.isTemplate && !isAdmin(req.user!.email)) {
+      return res.status(403).json({ error: 'Only admins can feature templates' })
+    }
 
     // Mint a slug the first time it becomes shareable.
     let shareSlug = existing.shareSlug
@@ -184,10 +280,12 @@ router.patch('/:id', async (req, res, next) => {
         tags: body.tags,
         visibility: body.visibility,
         coverUrl: body.coverUrl,
+        // The gallery only shows public roadmaps; unsharing one takes it out.
+        isTemplate: body.visibility && body.visibility !== 'public' ? false : body.isTemplate,
         shareSlug,
       },
     })
-    res.json({ roadmap: serializeRoadmap(updated) })
+    res.json({ roadmap: { ...serializeRoadmap(updated), canFeature: isAdmin(req.user!.email) } })
   } catch (err) {
     next(err)
   }
@@ -212,7 +310,8 @@ router.post('/:id/fork', async (req, res, next) => {
       const copy = await tx.roadmap.create({
         data: {
           ownerId: req.user!.id,
-          title: `${source.title} (fork)`,
+          // A template is meant to be copied; a fork of someone's roadmap says so.
+          title: source.isTemplate ? source.title : `${source.title} (fork)`,
           description: source.description,
           tags: source.tags,
           forkedFrom: source.id,
@@ -265,7 +364,7 @@ router.delete('/:id', async (req, res, next) => {
 /** PATCH /api/roadmaps/:id/graph — full-graph upsert (replace all nodes + edges). */
 router.patch('/:id/graph', async (req, res, next) => {
   try {
-    const { nodes, edges } = graphSchema.parse(req.body ?? {})
+    const { nodes, edges, baseVersion, force } = graphSaveSchema.parse(req.body ?? {})
 
     const existing = await prisma.roadmap.findUnique({ where: { id: req.params.id } })
     if (!existing) return res.status(404).json({ error: 'Not found' })
@@ -275,13 +374,27 @@ router.patch('/:id/graph', async (req, res, next) => {
       return res.status(400).json({ error: 'Graph contains a cycle' })
     }
 
+    // Each save replaces the whole graph, so a save built on an older version
+    // (another tab or device saved since) would silently wipe those edits.
+    // The version check and bump happen in one conditional update, so two
+    // saves racing on the same version can't both win.
     const roadmapId = req.params.id
-    await prisma.$transaction(async (tx) => {
+    const checkVersion = baseVersion !== undefined && !force
+    const version = await prisma.$transaction(async (tx) => {
+      const bumped = await tx.roadmap.updateMany({
+        where: { id: roadmapId, ...(checkVersion ? { version: baseVersion } : {}) },
+        data: { version: { increment: 1 }, updatedAt: new Date() },
+      })
+      if (bumped.count === 0) return null
       await writeGraphTx(tx, roadmapId, nodes, edges)
-      await tx.roadmap.update({ where: { id: roadmapId }, data: { updatedAt: new Date() } })
+      return (await tx.roadmap.findUniqueOrThrow({ where: { id: roadmapId }, select: { version: true } })).version
     })
+    if (version === null) {
+      const current = await prisma.roadmap.findUnique({ where: { id: roadmapId }, select: { version: true } })
+      return res.status(409).json({ error: 'This roadmap was changed somewhere else.', version: current?.version })
+    }
 
-    res.json({ ok: true, nodeCount: nodes.length, edgeCount: edges.length })
+    res.json({ ok: true, nodeCount: nodes.length, edgeCount: edges.length, version })
   } catch (err) {
     next(err)
   }

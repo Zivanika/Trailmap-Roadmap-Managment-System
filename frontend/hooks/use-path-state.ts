@@ -20,7 +20,10 @@ export function usePathState(): PathState | null {
   const active = loaded && roadmapId !== null && roadmapId === canvasRoadmapId
 
   const computed = useMemo(
-    () => (active ? computePathState(nodes, edges, (id) => statuses[id] === 'done') : null),
+    () =>
+      active
+        ? computePathState(nodes, edges, (id) => statuses[id] === 'done', (id) => statuses[id] === 'in_progress')
+        : null,
     [active, nodes, edges, statuses],
   )
   // Dragging changes `nodes` every frame. Keep handing back the previous object

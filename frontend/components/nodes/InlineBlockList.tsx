@@ -4,21 +4,13 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Trash2, ExternalLink, Play, X, ChevronLeft } from 'lucide-react'
 import { useCanvasStore } from '@/store/canvas-store'
-import { api } from '@/lib/api-client'
 import { normalizeUrl, safeHref } from '@/lib/url'
+import { parseYouTubeUrl, youtubeThumbnail } from '@/lib/youtube'
+import { addVideoOrLink, videoBadge } from '@/lib/video-block'
 import type { ContentBlock, NodeData, TextBlock, ChecklistBlock, ImageBlock } from '@/types'
 import { TextBlockComponent } from '@/components/blocks/TextBlock'
 import { ChecklistBlockComponent } from '@/components/blocks/ChecklistBlock'
 import { ImageBlockComponent } from '@/components/blocks/ImageBlock'
-
-function getYouTubeId(url: string): string | null {
-  try {
-    const u = new URL(url)
-    if (u.hostname.includes('youtu.be')) return u.pathname.slice(1)
-    if (u.hostname.includes('youtube.com')) return u.searchParams.get('v')
-    return null
-  } catch { return null }
-}
 
 function BlockDeleteButton({ onDelete }: { onDelete: () => void }) {
   return (
@@ -66,16 +58,26 @@ function BlockRow({
   }
 
   if (block.type === 'video') {
-    const videoId = getYouTubeId(block.url)
+    const ref = parseYouTubeUrl(block.url)
+    const thumb = ref ? youtubeThumbnail(ref, block.thumbnail) : null
+    const badge = videoBadge(block)
     return (
       <div className="group relative rounded-lg overflow-hidden">
-        {videoId ? (
-          <>
-            <img // eslint-disable-line @next/next/no-img-element
-              src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-              alt={block.title}
-              className="w-full h-[88px] object-cover"
-            />
+        {ref ? (
+          // Opens the video (or playlist) on YouTube.
+          <a href={safeHref(block.url)} target="_blank" rel="noopener noreferrer" className="block" aria-label={`Watch ${block.title}`}>
+            {thumb ? (
+              <img // eslint-disable-line @next/next/no-img-element
+                src={thumb}
+                alt=""
+                className="w-full h-[88px] object-cover"
+              />
+            ) : (
+              <div className="h-[88px] w-full bg-gradient-to-br from-red-500/40 to-black/40" />
+            )}
+            {badge && (
+              <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">{badge}</span>
+            )}
             <div className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors group-hover:bg-black/35">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow">
                 <Play size={12} className="ml-0.5 text-gray-900" fill="currentColor" />
@@ -84,7 +86,7 @@ function BlockRow({
             <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5">
               <p className="text-[11px] text-white/90 truncate">{block.title}</p>
             </div>
-          </>
+          </a>
         ) : (
           <div className="flex items-center gap-2 rounded-lg bg-gray-100 dark:bg-white/5 px-2.5 py-2 text-xs text-gray-500">
             <Play size={12} className="text-red-400 shrink-0" />
@@ -93,7 +95,8 @@ function BlockRow({
         )}
         <button
           onClick={onDelete}
-          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 rounded-md bg-black/50 p-1 text-white/70 hover:text-white transition-opacity"
+          aria-label="Delete video"
+          className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 rounded-md bg-black/50 p-1 text-white/70 hover:text-white transition-opacity"
         >
           <Trash2 size={11} />
         </button>
@@ -199,27 +202,9 @@ export function InlineBlockList({ nodeId, data }: Props) {
   }
 
   function commitVideo() {
-    const url = normalizeUrl(urlVal)
-    if (!url) return
-    const blockId = crypto.randomUUID()
-    patch([...data.blocks, { id: blockId, type: 'video', url, title: 'YouTube video' }])
+    if (!urlVal.trim()) return
+    addVideoOrLink(nodeId, urlVal)
     closeDialog()
-    // Enrich with real title + thumbnail (keyless oEmbed via backend).
-    api
-      .youtubeMetadata(url)
-      .then((meta) => {
-        if (!meta.title && !meta.thumbnail) return
-        const current = useCanvasStore.getState().nodes.find((n) => n.id === nodeId)
-        if (!current) return
-        updateNodeData(nodeId, {
-          blocks: current.data.blocks.map((b) =>
-            b.id === blockId && b.type === 'video'
-              ? { ...b, title: meta.title || b.title, thumbnail: meta.thumbnail || b.thumbnail }
-              : b,
-          ),
-        })
-      })
-      .catch(() => {})
   }
 
   return (

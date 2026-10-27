@@ -6,7 +6,8 @@ import { useCanvasStore } from '@/store/canvas-store'
 import { useUIStore } from '@/store/ui-store'
 import { useStore } from 'zustand'
 import type { CanvasNode } from '@/types'
-import { Undo2, Redo2, Sparkles } from 'lucide-react'
+import { Undo2, Redo2, Sparkles, Wand2 } from 'lucide-react'
+import { autoLayout } from '@/lib/auto-layout'
 import { cn } from '@/lib/utils'
 
 const NODE_PRESETS: { type: CanvasNode['type']; label: string; emoji: string; color: string }[] = [
@@ -66,6 +67,14 @@ export function CanvasToolbar() {
   const { undo, redo, pastStates, futureStates } = useStore(useCanvasStore.temporal)
   // zundo restores nodes/edges but not isDirty; flag it so the undo is saved too.
   const markDirty = useCanvasStore((s) => s.markDirty)
+  const nodeCount = useCanvasStore((s) => s.nodes.length)
+
+  // One undo step; then fit the view to the tidied trail.
+  function tidyUp() {
+    const { nodes, edges, setNodes } = useCanvasStore.getState()
+    setNodes(autoLayout(nodes, edges))
+    useUIStore.getState().requestFitView()
+  }
 
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 rounded-2xl border border-white/10 bg-gray-950/80 backdrop-blur-md px-2 py-1.5 shadow-xl">
@@ -74,7 +83,7 @@ export function CanvasToolbar() {
           key={p.type}
           onClick={() => handleAdd(p.type)}
           className={cn(
-            'flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-gray-400 transition-colors',
+            'flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-medium text-gray-400 transition-colors',
             p.color,
           )}
           title={`Add ${p.label}`}
@@ -88,11 +97,21 @@ export function CanvasToolbar() {
 
       <button
         onClick={() => setGenerateOpen(true)}
-        className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-violet-300 transition-colors hover:bg-violet-500/15"
+        className="flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-medium text-violet-300 transition-colors hover:bg-violet-500/15"
         title="Generate with AI"
       >
         <Sparkles size={15} />
         <span>Generate</span>
+      </button>
+
+      <button
+        onClick={tidyUp}
+        disabled={nodeCount < 2}
+        className="flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-medium text-gray-400 transition-colors hover:bg-white/10 hover:text-gray-200 disabled:cursor-not-allowed disabled:opacity-30"
+        title="Tidy up: lay the trail out top to bottom"
+      >
+        <Wand2 size={15} />
+        <span>Tidy up</span>
       </button>
 
       <div className="mx-1.5 h-4 w-px bg-white/10" />

@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { NextRequest } from 'next/server'
+import { backendFetch } from '@/lib/backend'
 
 /**
  * Server-side proxy to the Express backend.
@@ -12,7 +13,6 @@ import { NextRequest } from 'next/server'
  *   client → /api/proxy/roadmaps/123/graph → backend /api/roadmaps/123/graph
  */
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:4000'
 const COOKIE_NAMES = ['authjs.session-token', '__Secure-authjs.session-token']
 
 async function getSessionToken(): Promise<string | null> {
@@ -27,7 +27,7 @@ async function getSessionToken(): Promise<string | null> {
 async function forward(req: NextRequest, path: string[]) {
   const token = await getSessionToken()
   const search = req.nextUrl.search
-  const target = `${BACKEND_URL}/api/${path.join('/')}${search}`
+  const target = `/api/${path.join('/')}${search}`
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -35,19 +35,20 @@ async function forward(req: NextRequest, path: string[]) {
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
   const body = hasBody ? await req.text() : undefined
 
-  const res = await fetch(target, {
+  // backendFetch adds the visitor's IP (with PROXY_SECRET) for the backend's rate limits.
+  const res = await backendFetch(target, {
     method: req.method,
     headers,
     body,
     cache: 'no-store',
   })
 
-  // Pass through status + JSON (or empty for 204).
+  // Pass through status + JSON (or empty for 204), and Retry-After on 429s.
   const text = await res.text()
-  return new Response(text || null, {
-    status: res.status,
-    headers: { 'Content-Type': res.headers.get('Content-Type') ?? 'application/json' },
-  })
+  const out = new Headers({ 'Content-Type': res.headers.get('Content-Type') ?? 'application/json' })
+  const retryAfter = res.headers.get('Retry-After')
+  if (retryAfter) out.set('Retry-After', retryAfter)
+  return new Response(text || null, { status: res.status, headers: out })
 }
 
 type Ctx = { params: Promise<{ path: string[] }> }

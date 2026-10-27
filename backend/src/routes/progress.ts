@@ -37,7 +37,13 @@ router.get('/summary', async (req, res, next) => {
       if (t > (lastDoneByRoadmap.get(c.roadmapId) ?? 0)) lastDoneByRoadmap.set(c.roadmapId, t)
     }
 
-    // Candidates to resume: the user's own roadmaps plus ones they track progress on.
+    // Candidates to resume: the user's own roadmaps, ones they track progress on, and ones they follow.
+    const followed = await prisma.roadmapFollow.findMany({ where: { userId }, select: { roadmapId: true, createdAt: true } })
+    for (const f of followed) {
+      // Following counts as activity, so a roadmap just followed can be picked up.
+      const t = f.createdAt.getTime()
+      if (t > (lastDoneByRoadmap.get(f.roadmapId) ?? 0)) lastDoneByRoadmap.set(f.roadmapId, t)
+    }
     const roadmaps = await prisma.roadmap.findMany({
       where: { OR: [{ ownerId: userId }, { id: { in: [...lastDoneByRoadmap.keys()] } }] },
       select: { id: true, title: true, ownerId: true, visibility: true, shareSlug: true, updatedAt: true },
@@ -60,10 +66,14 @@ router.get('/summary', async (req, res, next) => {
           select: { id: true, type: true, positionX: true, positionY: true, data: true },
         }),
         prisma.edge.findMany({ where: { roadmapId: r.id }, select: { sourceNodeId: true, targetNodeId: true } }),
-        prisma.nodeProgress.findMany({ where: { userId, roadmapId: r.id, status: 'done' }, select: { nodeId: true } }),
+        prisma.nodeProgress.findMany({
+          where: { userId, roadmapId: r.id, status: { in: ['done', 'in_progress'] } },
+          select: { nodeId: true, status: true },
+        }),
       ])
-      const doneIds = new Set(done.map((d) => d.nodeId))
-      const nextNode = pickNextStep(nodes, edges, doneIds)
+      const doneIds = new Set(done.filter((d) => d.status === 'done').map((d) => d.nodeId))
+      const inProgressIds = new Set(done.filter((d) => d.status === 'in_progress').map((d) => d.nodeId))
+      const nextNode = pickNextStep(nodes, edges, doneIds, inProgressIds)
       if (!nextNode) continue
       const title = (nextNode.data as { title?: unknown })?.title
       resume = {

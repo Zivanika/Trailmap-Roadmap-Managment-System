@@ -13,13 +13,15 @@ export interface PathState {
  * Port of the backend's `pickNextStep` (backend/src/lib/next-step.ts), extended
  * to classify every node: a node is locked while any step/milestone feeding
  * into it is undone, and "next" is the first unlocked undone node reading the
- * canvas top-to-bottom, left-to-right. Keep the two in sync so the dashboard's
+ * canvas top-to-bottom, left-to-right, preferring a step already in progress.
+ * Keep the two in sync so the dashboard's
  * "pick up where you left off" card and the canvas glow agree.
  */
 export function computePathState(
   nodes: CanvasNode[],
   edges: CanvasEdge[],
   isDone: (id: string) => boolean,
+  isInProgress: (id: string) => boolean = () => false,
 ): PathState {
   const trackable = nodes.filter((n) => n.type === 'step' || n.type === 'milestone')
   const trackableIds = new Set(trackable.map((n) => n.id))
@@ -41,8 +43,10 @@ export function computePathState(
   const undone = trackable
     .filter((n) => status[n.id] !== 'done')
     .sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x)
-  // Same fallback as the backend: with no unlocked node, point at the first undone one.
-  const next = undone.find((n) => status[n.id] === 'open') ?? undone[0] ?? null
+  // Same as the backend: an unlocked step already in progress first, then the
+  // first unlocked one, then (nothing unlocked) the first undone one.
+  const open = undone.filter((n) => status[n.id] === 'open')
+  const next = open.find((n) => isInProgress(n.id)) ?? open[0] ?? undone[0] ?? null
   if (next) status[next.id] = 'next'
 
   return { status, nextId: next?.id ?? null }

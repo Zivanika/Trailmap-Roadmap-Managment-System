@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, LayoutTemplate, MapPin, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowLeft, LayoutTemplate, Loader2, MapPin, Sparkles } from 'lucide-react'
+import { api, type ExploreItem } from '@/lib/api-client'
+import { toast } from '@/store/toast-store'
 import { useCanvasStore } from '@/store/canvas-store'
 import { useUIStore } from '@/store/ui-store'
 import { TEMPLATES, buildTemplate, type RoadmapTemplate } from '@/lib/templates'
@@ -10,6 +13,9 @@ import { useAddNodeAtCenter } from './CanvasToolbar'
 /** Shown in the middle of a roadmap with no nodes, so a blank canvas has an obvious first move. */
 export function EmptyCanvas() {
   const [picking, setPicking] = useState(false)
+  // Featured templates from the gallery, fetched when the picker opens (null = loading).
+  const [gallery, setGallery] = useState<ExploreItem[] | null>(null)
+  const [applying, setApplying] = useState<string | null>(null)
   const addNode = useAddNodeAtCenter()
   const setGenerateOpen = useUIStore((s) => s.setGenerateOpen)
 
@@ -18,9 +24,33 @@ export function EmptyCanvas() {
     useUIStore.getState().requestFitView()
   }
 
+  function openPicker() {
+    setPicking(true)
+    if (gallery === null) {
+      api
+        .listTemplates()
+        .then(({ roadmaps }) => setGallery(roadmaps.slice(0, 6)))
+        .catch(() => setGallery([]))
+    }
+  }
+
+  async function applyGalleryTemplate(t: ExploreItem) {
+    setApplying(t.shareSlug)
+    try {
+      const { roadmap } = await api.getSharedGraph(t.shareSlug)
+      // insertGraph gives everything fresh ids, so the copy is independent of the template.
+      useCanvasStore.getState().insertGraph({ nodes: roadmap.nodes ?? [], edges: roadmap.edges ?? [] })
+      useUIStore.getState().requestFitView()
+    } catch {
+      toast.error('Couldn’t load that template. Please try again.')
+    } finally {
+      setApplying(null)
+    }
+  }
+
   return (
     <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center p-4">
-      <div className="tm-fade-up pointer-events-auto w-full max-w-sm rounded-2xl border border-emerald-400/15 bg-[#0b2116]/90 p-5 shadow-2xl backdrop-blur-md">
+      <div className="tm-fade-up pointer-events-auto max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-emerald-400/15 bg-[#0b2116]/90 p-5 shadow-2xl backdrop-blur-md">
         {picking ? (
           <>
             <button
@@ -46,6 +76,43 @@ export function EmptyCanvas() {
                 </li>
               ))}
             </ul>
+            {gallery === null ? (
+              <p className="mt-3 flex items-center gap-2 text-xs text-white/40">
+                <Loader2 size={12} className="animate-spin" /> Loading the template gallery…
+              </p>
+            ) : (
+              gallery.length > 0 && (
+                <>
+                  <h3 className="mt-4 text-xs font-medium uppercase tracking-wide text-white/40">From the gallery</h3>
+                  <ul className="mt-2 space-y-2">
+                    {gallery.map((t) => (
+                      <li key={t.shareSlug}>
+                        <button
+                          onClick={() => applyGalleryTemplate(t)}
+                          disabled={applying !== null}
+                          className="flex w-full items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left transition-colors hover:border-emerald-400/40 hover:bg-emerald-400/10 disabled:opacity-60"
+                        >
+                          {applying === t.shareSlug ? (
+                            <Loader2 size={16} className="mt-0.5 shrink-0 animate-spin text-emerald-300" />
+                          ) : (
+                            <LayoutTemplate size={16} className="mt-0.5 shrink-0 text-amber-200" />
+                          )}
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium text-white">{t.title}</span>
+                            <span className="block text-xs text-white/50">
+                              {t.steps} steps{t.milestones ? ` · ${t.milestones} milestone${t.milestones === 1 ? '' : 's'}` : ''}
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/explore?templates=1" className="mt-3 inline-block text-xs text-emerald-300 hover:underline">
+                    Browse the template gallery
+                  </Link>
+                </>
+              )
+            )}
           </>
         ) : (
           <>
@@ -68,8 +135,8 @@ export function EmptyCanvas() {
               <EmptyOption
                 icon={<LayoutTemplate size={16} />}
                 title="Start from a template"
-                hint={`${TEMPLATES.length} starter roadmaps`}
-                onClick={() => setPicking(true)}
+                hint="Starter roadmaps and the gallery"
+                onClick={openPicker}
               />
             </div>
           </>

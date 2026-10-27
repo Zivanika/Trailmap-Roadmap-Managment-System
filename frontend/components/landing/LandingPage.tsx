@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import {
   ArrowRight, MapPin, Share2, Sparkles, Trophy, Video, Workflow, CheckCircle2,
 } from 'lucide-react'
@@ -23,10 +22,13 @@ export function LandingPage() {
       {/* Nav */}
       <nav className="tm-fade-up relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2 text-lg font-bold">
-          <Image src="/icon.svg" alt="Trailmap" width={28} height={28} className="rounded-md" /> Trailmap
+          <span className="text-emerald-400">▲</span> Trailmap
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/try" className="rounded-lg px-4 py-2 text-sm font-medium text-white/70 hover:text-white">
+          <Link href="/explore" className="rounded-lg px-4 py-2 text-sm font-medium text-white/70 hover:text-white">
+            Explore
+          </Link>
+          <Link href="/try" className="hidden rounded-lg px-4 py-2 text-sm font-medium text-white/70 hover:text-white sm:block">
             Try the canvas
           </Link>
           <Link
@@ -40,7 +42,9 @@ export function LandingPage() {
 
       {/* Hero */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 pb-20 pt-16 text-center">
-        
+        <span className="tm-fade-up inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+          <Sparkles size={13} className="animate-pulse" /> Local-first · AI-assisted
+        </span>
         <h1 style={delay(100)} className="tm-fade-up mx-auto mt-6 max-w-3xl text-5xl font-extrabold leading-[1.1] tracking-tight sm:text-6xl">
           Map your learning journey,{' '}
           <span
@@ -150,10 +154,7 @@ export function LandingPage() {
       </section>
 
       <footer className="relative z-10 border-t border-white/10 py-8 text-center text-sm text-white/40">
-        <span className="inline-flex items-center justify-center gap-2">
-          <Image src="/icon.svg" alt="Trailmap" width={20} height={20} className="rounded" />
-          Trailmap — build and share learning roadmaps.
-        </span>
+        <span className="text-emerald-400">▲</span> Trailmap — build and share learning roadmaps.
       </footer>
     </main>
   )

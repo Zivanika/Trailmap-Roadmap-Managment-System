@@ -11,6 +11,9 @@ import { VideoBlockComponent } from '@/components/blocks/VideoBlock'
 import { ChecklistBlockComponent } from '@/components/blocks/ChecklistBlock'
 import { ImageBlockComponent } from '@/components/blocks/ImageBlock'
 import { normalizeUrl } from '@/lib/url'
+import { addVideoOrLink } from '@/lib/video-block'
+import { StatusPicker } from '@/components/nodes/NodeDoneToggle'
+import { NodeAiTools } from './NodeAiTools'
 
 const NODE_COLORS: { name: string; bg: string }[] = [
   { name: 'blue', bg: 'bg-blue-400' },
@@ -82,6 +85,7 @@ export function NodePanel() {
   const nodes = useCanvasStore((s) => s.nodes)
   const updateNodeData = useCanvasStore((s) => s.updateNodeData)
   const deleteNode = useCanvasStore((s) => s.deleteNode)
+  const mode = useCanvasStore((s) => s.mode)
 
   const node = nodes.find((n) => n.id === activePanelNodeId)
   const [addingLink, setAddingLink] = useState(false)
@@ -150,14 +154,7 @@ export function NodePanel() {
   }
 
   function commitVideo(input: string) {
-    const url = normalizeUrl(input)
-    const block: ContentBlock = {
-      id: crypto.randomUUID(),
-      type: 'video',
-      url,
-      title: 'YouTube video',
-    }
-    patchData({ blocks: [...data.blocks, block] })
+    addVideoOrLink(node!.id, input)
     setAddingVideo(false)
   }
 
@@ -194,6 +191,8 @@ export function NodePanel() {
             placeholder="Node title"
           />
         </div>
+
+        {(node.type === 'step' || node.type === 'milestone') && <StatusPicker nodeId={node.id} />}
 
         {/* Est. time (not for notes) */}
         {node.type !== 'note' && (
@@ -306,6 +305,8 @@ export function NodePanel() {
             </div>
           </div>
         )}
+        {/* AI needs an account and a saved roadmap, so only in the cloud editor. */}
+        {mode === 'cloud' && (node.type === 'step' || node.type === 'milestone') && <NodeAiTools node={node} />}
       </div>
 
       {/* Delete */}

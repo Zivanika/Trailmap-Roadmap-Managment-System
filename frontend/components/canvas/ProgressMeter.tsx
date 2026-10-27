@@ -42,7 +42,7 @@ export function ProgressMeter() {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
+      <div className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-white/10 sm:block">
         <div
           className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
           style={{ width: `${pct}%` }}
@@ -50,7 +50,7 @@ export function ProgressMeter() {
       </div>
       <span className="flex items-center gap-1 whitespace-nowrap text-xs text-white/50">
         {pct === 100 && <Trophy size={12} className="tm-check text-amber-300" />}
-        {pct}% · {done}/{total}
+        {pct}%<span className="hidden sm:inline"> · {done}/{total}</span>
       </span>
       {celebrate > 0 && <Confetti key={celebrate} />}
     </div>

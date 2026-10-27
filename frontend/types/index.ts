@@ -24,7 +24,11 @@ export interface VideoBlock {
   url: string
   title: string
   thumbnail?: string
+  /** "4:05"; only known with a YouTube Data API key. */
   duration?: string
+  /** A whole playlist rather than one video. */
+  kind?: 'video' | 'playlist'
+  itemCount?: number
 }
 
 export interface ImageBlock {

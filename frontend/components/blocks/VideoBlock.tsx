@@ -2,29 +2,18 @@
 
 import type { VideoBlock } from '@/types'
 import { Trash2 } from 'lucide-react'
+import { parseYouTubeUrl, youtubeEmbedUrl } from '@/lib/youtube'
+import { videoBadge } from '@/lib/video-block'
 
 interface Props {
   block: VideoBlock
   onDelete: () => void
 }
 
-function youtubeEmbedUrl(url: string): string | null {
-  try {
-    const u = new URL(url)
-    let id: string | null = null
-    if (u.hostname.includes('youtu.be')) {
-      id = u.pathname.slice(1)
-    } else if (u.hostname.includes('youtube.com')) {
-      id = u.searchParams.get('v')
-    }
-    return id ? `https://www.youtube.com/embed/${id}` : null //Here embed url is being returned for the youtube video to play the yt video
-  } catch {
-    return null
-  }
-}
-
 export function VideoBlockComponent({ block, onDelete }: Props) {
-  const embedUrl = youtubeEmbedUrl(block.url)
+  const ref = parseYouTubeUrl(block.url)
+  const embedUrl = ref ? youtubeEmbedUrl(ref) : null
+  const badge = videoBadge(block)
 
   return (
     <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 group relative">
@@ -41,8 +30,15 @@ export function VideoBlockComponent({ block, onDelete }: Props) {
           {block.title || block.url}
         </div>
       )}
+      {(badge || block.title) && embedUrl && (
+        <p className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs text-gray-400">
+          <span className="truncate">{block.title}</span>
+          {badge && <span className="shrink-0 text-gray-500">{badge}</span>}
+        </p>
+      )}
       <button
         onClick={onDelete}
+        aria-label="Delete video"
         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-white dark:bg-gray-900 rounded p-1 text-gray-400 hover:text-red-500 transition-opacity shadow"
       >
         <Trash2 size={14} />

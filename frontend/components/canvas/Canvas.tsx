@@ -106,6 +106,11 @@ function CanvasInner({ localInit = true, autosaveMode = 'local', readOnly = fals
 
   useAutosave(autosaveMode)
 
+  // Tells the panels what's possible here (AI tools need the cloud).
+  useEffect(() => {
+    useCanvasStore.getState().setMode(readOnly ? 'readonly' : autosaveMode === 'cloud' ? 'cloud' : 'local')
+  }, [readOnly, autosaveMode])
+
   // The anonymous/local canvas has no per-user progress tracking.
   useEffect(() => {
     if (autosaveMode === 'local') useProgressStore.getState().reset()

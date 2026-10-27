@@ -1,12 +1,14 @@
 /**
  * Picks the step/milestone a learner should do next: the first undone node
  * whose prerequisites (incoming edges) are all done, reading the canvas
- * top-to-bottom, left-to-right. Falls back to any undone node.
+ * top-to-bottom, left-to-right. A step already marked in progress comes
+ * first. Falls back to any undone node. Mirrored in frontend/lib/path-state.ts.
  */
 export function pickNextStep<T extends { id: string; type: string; positionX: number; positionY: number }>(
   nodes: T[],
   edges: { sourceNodeId: string; targetNodeId: string }[],
   done: Set<string>,
+  inProgress: Set<string> = new Set(),
 ): T | null {
   const trackable = nodes.filter((n) => n.type === 'step' || n.type === 'milestone')
   const undone = trackable
@@ -23,7 +25,8 @@ export function pickNextStep<T extends { id: string; type: string; positionX: nu
     prereqs.set(e.targetNodeId, list)
   }
 
-  return undone.find((n) => (prereqs.get(n.id) ?? []).every((p) => done.has(p))) ?? undone[0]
+  const unlocked = undone.filter((n) => (prereqs.get(n.id) ?? []).every((p) => done.has(p)))
+  return unlocked.find((n) => inProgress.has(n.id)) ?? unlocked[0] ?? undone[0]
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000

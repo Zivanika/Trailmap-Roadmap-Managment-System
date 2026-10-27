@@ -36,6 +36,8 @@ export function serializeRoadmap(
     tags: r.tags,
     coverUrl: r.coverUrl ?? undefined,
     viewCount: r.viewCount,
+    version: r.version,
+    isTemplate: r.isTemplate,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
     ...(r.nodes ? { nodes: r.nodes.map(serializeNode) } : {}),

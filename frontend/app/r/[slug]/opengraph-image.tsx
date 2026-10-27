@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { BACKDROP, Card, EMERALD, Logo, truncate } from '@/components/og/parts'
 import type { RoadmapFull } from '@/lib/api-client'
+import { backendFetch } from '@/lib/backend'
 
 // Link preview for a shared roadmap (WhatsApp, iMessage, Slack, X, …): its
 // title, size, and its first few steps drawn as on the canvas.
@@ -10,14 +11,10 @@ export const contentType = 'image/png'
 // Previews are fetched by crawlers on every share; an hour-old card is fine.
 export const revalidate = 3600
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:4000'
-
 async function fetchPreview(slug: string): Promise<RoadmapFull | null> {
   try {
     // `preview=1` so crawlers fetching the card don't count as views.
-    const res = await fetch(`${BACKEND_URL}/api/r/${encodeURIComponent(slug)}?preview=1`, {
-      next: { revalidate: 3600 },
-    })
+    const res = await backendFetch(`/api/r/${encodeURIComponent(slug)}?preview=1`, { next: { revalidate: 3600 } }, { clientIp: null })
     if (!res.ok) return null
     return ((await res.json()) as { roadmap: RoadmapFull }).roadmap
   } catch {

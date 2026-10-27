@@ -97,11 +97,13 @@ export function ExportMenu({ title }: { title: string }) {
       <button
         onClick={() => setOpen((o) => !o)}
         disabled={busy}
-        className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20 disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-white/20 disabled:opacity-50 sm:px-3"
         title="Export"
+        aria-label="Export"
       >
         <Download size={13} />
-        {busy ? 'Exporting…' : 'Export'}
+        {/* Icon only on phones, where the header is short of room. */}
+        <span className="hidden sm:inline">{busy ? 'Exporting…' : 'Export'}</span>
       </button>
       {open && (
         <>

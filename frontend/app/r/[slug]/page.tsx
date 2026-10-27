@@ -2,13 +2,13 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { PublicRoadmapView } from '@/components/canvas/PublicRoadmapView'
 import type { RoadmapFull } from '@/lib/api-client'
-
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:4000'
+import { backendFetch } from '@/lib/backend'
 
 // Called from both generateMetadata and the page; Next memoizes identical GET
 // fetches within one request, so the backend (and viewCount) sees one hit.
 async function fetchRoadmap(slug: string): Promise<RoadmapFull | null> {
-  const res = await fetch(`${BACKEND_URL}/api/r/${slug}`, { cache: 'no-store' })
+  // Forwards the visitor's IP, so the backend counts one view per visitor.
+  const res = await backendFetch(`/api/r/${encodeURIComponent(slug)}`, { cache: 'no-store' })
   if (!res.ok) return null
   const { roadmap } = await res.json()
   return roadmap as RoadmapFull
@@ -32,6 +32,8 @@ export async function generateMetadata({
     title: roadmap.title,
     description,
     alternates: { canonical: `/r/${slug}` },
+    // Unlisted means "anyone with the link", not "anyone searching".
+    ...(roadmap.visibility !== 'public' ? { robots: { index: false, follow: false } } : {}),
     openGraph: { title: shareTitle, description, type: 'article', url: `/r/${slug}` },
     twitter: { card: 'summary_large_image', title: shareTitle, description },
   }
