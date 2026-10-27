@@ -8,7 +8,7 @@ import { EmailNotConfiguredError, sendEmail } from '../services/email'
 const router = Router()
 
 const TOKEN_TTL_MS = 15 * 60 * 1000
-const MAX_PER_EMAIL_PER_HOUR = 3
+const MAX_PER_EMAIL_PER_HOUR = 5
 
 const hash = (token: string) => createHash('sha256').update(token).digest('hex')
 
