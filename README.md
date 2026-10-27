@@ -114,8 +114,8 @@ FRONTEND_ORIGIN=http://localhost:3000      # for CORS
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
-OPENROUTER_API_KEY=
-OPENROUTER_MODEL=                          # defaults to a free OpenRouter model
+OPENAI_API_KEY=
+OPENAI_MODEL=                              # defaults to gpt-4o-mini
 ```
 
 ### 2. Frontend

@@ -12,10 +12,8 @@ export function formatEstimate(minutes: number) {
   return `~${Math.round((minutes / 60) * 2) / 2}h`
 }
 
-/** Opacity for a card given its path status; locked cards brighten on hover so they stay editable. */
-export function pathDimClass(status: PathStatus | null, done: boolean) {
-  if (done) return 'opacity-60'
-  if (status === 'locked') return 'opacity-45 hover:opacity-90'
+/** All cards render at full opacity; path status is still conveyed by the "Next up" glow and lock icon. */
+export function pathDimClass(_status: PathStatus | null, _done: boolean) {
   return null
 }
 

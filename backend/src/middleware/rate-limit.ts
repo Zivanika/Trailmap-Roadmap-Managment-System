@@ -79,12 +79,20 @@ export async function runWithAiQuota<T>(opts: {
 
 /** Maps provider errors to messages a user can act on; anything else is rethrown. */
 export function aiProviderError(e: unknown): HttpError | null {
-  const code = (e as { code?: string })?.code
-  const lc = (e as { lc_error_code?: string })?.lc_error_code
+  const err = e as { code?: string; lc_error_code?: string; status?: number }
+  const code = err.code
+  const lc = err.lc_error_code
+  const status = err.status
   if (code === 'insufficient_quota' || code === 'credit_balance_exhausted') {
-    return new HttpError(503, 'AI is unavailable: the OpenRouter account has no credits.')
+    return new HttpError(503, 'AI is unavailable: the OpenAI account has no credits.')
   }
-  if (lc === 'MODEL_RATE_LIMIT' || code === 'rate_limit_exceeded') {
+  if (code === 'invalid_api_key' || status === 401) {
+    return new HttpError(503, 'AI is misconfigured: the OpenAI API key is missing or invalid.')
+  }
+  if (code === 'model_not_found' || status === 404) {
+    return new HttpError(503, 'AI is unavailable: the configured model could not be reached.')
+  }
+  if (lc === 'MODEL_RATE_LIMIT' || code === 'rate_limit_exceeded' || status === 429) {
     return new HttpError(503, 'AI is busy right now. Please try again shortly.')
   }
   return null

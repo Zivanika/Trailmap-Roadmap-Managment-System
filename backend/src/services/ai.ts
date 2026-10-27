@@ -4,11 +4,10 @@ import type { AiGenerateInput } from '../lib/validators'
 import type { AiResult } from '../middleware/rate-limit'
 
 /**
- * AI roadmap generation via LangChain + OpenRouter structured output.
+ * AI roadmap generation via LangChain + OpenAI structured output.
  *
- * OpenRouter is OpenAI-API-compatible, so we keep LangChain's ChatOpenAI client
- * and just repoint it at OpenRouter's base URL with an OpenRouter key. The model
- * is a free OpenRouter model (override via OPENROUTER_MODEL).
+ * Uses OpenAI's gpt-4o-mini by default (override via OPENAI_MODEL): it's cheap
+ * and supports structured output, which withStructuredOutput relies on.
  *
  * Guardrail: the model only produces step titles/descriptions — never URLs.
  * Real resources are attached later via the YouTube/link flows. Blocks are
@@ -54,13 +53,10 @@ function userPrompt(input: AiGenerateInput): string {
 
 function chatModel(maxTokens: number) {
   return new ChatOpenAI({
-    model: process.env.OPENROUTER_MODEL ?? 'nvidia/nemotron-3-super-120b-a12b:free',
+    model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
     temperature: 0.4,
-    apiKey: process.env.OPENROUTER_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY,
     maxTokens,
-    configuration: {
-      baseURL: 'https://openrouter.ai/api/v1',
-    },
   })
 }
 
