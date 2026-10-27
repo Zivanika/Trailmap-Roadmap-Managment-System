@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { Loader2 } from 'lucide-react'
@@ -43,7 +44,7 @@ function Verify() {
   return (
     <main className="flex flex-1 items-center justify-center bg-[#06130d] p-6 text-white">
       <div className="max-w-sm text-center">
-        <p className="text-3xl text-emerald-400">▲</p>
+        <Image src="/icon-192.png" alt="Trailmap" width={48} height={48} className="mx-auto rounded-xl" />
         {failed ? (
           <>
             <h1 className="mt-4 text-xl font-semibold">This sign-in link didn’t work</h1>

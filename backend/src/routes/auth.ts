@@ -51,7 +51,7 @@ router.post('/magic-link', magicLinkLimit, async (req, res, next) => {
           subject: 'Your Trailmap sign-in link',
           text: `Sign in to Trailmap:\n${link}\n\nThe link works once and expires in 15 minutes. If you didn’t ask for it, ignore this email.`,
           html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px;color:#0b2116">
-  <p style="font-size:18px;font-weight:700;margin:0 0 16px"><span style="color:#10b981">▲</span> Trailmap</p>
+  <p style="font-size:18px;font-weight:700;margin:0 0 16px"><img src="${origin}/icon-192.png" alt="Trailmap" width="24" height="24" style="vertical-align:middle;border-radius:6px;margin-right:6px" />Trailmap</p>
   <p>Click the button to sign in. The link works once and expires in 15 minutes.</p>
   <p style="margin:24px 0"><a href="${escapeHtml(link)}" style="background:#10b981;color:#022c22;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Sign in to Trailmap</a></p>
   <p style="font-size:13px;color:#555">If you didn’t ask for this, you can ignore this email.</p>
