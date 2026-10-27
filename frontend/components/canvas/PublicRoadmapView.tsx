@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { BellPlus, BellRing, Copy, GitFork, Loader2 } from 'lucide-react'
@@ -70,8 +71,9 @@ export function PublicRoadmapView({ roadmap }: { roadmap: RoadmapFull }) {
       <header className="relative z-50 flex items-center justify-between gap-3 border-b border-white/10 bg-neutral-950/60 px-5 py-3 backdrop-blur">
         <div className="flex min-w-0 items-center gap-3">
           {/* Visitors arriving by link can find more roadmaps from here. */}
-          <Link href="/explore" title="Explore more roadmaps" className="shrink-0 text-lg font-bold text-emerald-400 hover:text-emerald-300">
-            ▲<span className="sr-only">Explore more roadmaps on Trailmap</span>
+          <Link href="/explore" title="Explore more roadmaps" className="shrink-0">
+            <Image src="/icon-192.png" alt="Trailmap" width={28} height={28} className="rounded-md" />
+            <span className="sr-only">Explore more roadmaps on Trailmap</span>
           </Link>
           <div className="min-w-0">
             <h1 className="truncate text-sm font-semibold text-white">{roadmap.title}</h1>
