@@ -154,9 +154,13 @@ function StepNode({ data, id, selected }: NodeProps<CanvasNode>) {
             )}
           />
           {blockCount > 0 && !expanded && (
-            <p className={cn('mt-1 text-[11px] font-medium', s.meta)}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); selectNode(id); openSidebar(id) }}
+              className={cn('mt-1 text-[11px] font-medium hover:underline', s.meta)}
+            >
               ▼ {blockCount} resource{blockCount !== 1 ? 's' : ''}
-            </p>
+            </button>
           )}
         </div>
 
