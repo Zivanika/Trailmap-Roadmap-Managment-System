@@ -76,7 +76,7 @@ function AuthCard() {
               <p className="mt-1 text-green-800/80">
                 We sent a sign-in link to <span className="font-medium">{email.trim()}</span>. It works once and expires in 15 minutes.
               </p>
-              <button onClick={() => setState('idle')} className="mt-3 text-xs font-semibold text-green-700 hover:underline">
+              <button onClick={() => setState('idle')} className="mt-3 cursor-pointer text-xs font-semibold text-green-700 hover:underline">
                 Use a different email
               </button>
             </div>
@@ -91,7 +91,7 @@ function AuthCard() {
               <button
                 type="submit"
                 disabled={state === 'sending'}
-                className="w-full rounded-full bg-green-700 py-2.5 text-sm font-bold text-white transition-colors hover:bg-green-800 disabled:opacity-60"
+                className="w-full cursor-pointer rounded-full bg-green-700 py-2.5 text-sm font-bold text-white transition-colors hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {state === 'sending' ? 'Sending…' : 'Email me a sign-in link'}
               </button>
@@ -99,7 +99,7 @@ function AuthCard() {
                 <button
                   type="button"
                   onClick={() => email.trim() && signIn('dev', { email: email.trim(), callbackUrl })}
-                  className="w-full text-[11px] text-amber-600 hover:underline"
+                  className="w-full cursor-pointer text-[11px] text-amber-600 hover:underline"
                 >
                   Dev only: sign in instantly with this email
                 </button>
@@ -115,7 +115,7 @@ function AuthCard() {
 
           <button
             onClick={() => signIn('google', { callbackUrl })}
-            className="flex w-full items-center justify-center gap-2.5 rounded-full border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className="flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-full border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
           >
             <GoogleIcon />
             Continue with Google
