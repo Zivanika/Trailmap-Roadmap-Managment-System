@@ -40,22 +40,29 @@ router.post('/magic-link', magicLinkLimit, async (req, res, next) => {
     })
     if (recent < MAX_PER_EMAIL_PER_HOUR) {
       const token = randomBytes(32).toString('base64url')
-      await prisma.magicLinkToken.create({
+      const row = await prisma.magicLinkToken.create({
         data: { email, tokenHash: hash(token), expiresAt: new Date(Date.now() + TOKEN_TTL_MS) },
       })
       const origin = process.env.FRONTEND_ORIGIN ?? 'http://localhost:3000'
       const link = `${origin}/verify?${new URLSearchParams({ token, callbackUrl: safeCallback(callbackUrl) })}`
-      await sendEmail({
-        to: email,
-        subject: 'Your Trailmap sign-in link',
-        text: `Sign in to Trailmap:\n${link}\n\nThe link works once and expires in 15 minutes. If you didn’t ask for it, ignore this email.`,
-        html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px;color:#0b2116">
+      try {
+        await sendEmail({
+          to: email,
+          subject: 'Your Trailmap sign-in link',
+          text: `Sign in to Trailmap:\n${link}\n\nThe link works once and expires in 15 minutes. If you didn’t ask for it, ignore this email.`,
+          html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px;color:#0b2116">
   <p style="font-size:18px;font-weight:700;margin:0 0 16px"><span style="color:#10b981">▲</span> Trailmap</p>
   <p>Click the button to sign in. The link works once and expires in 15 minutes.</p>
   <p style="margin:24px 0"><a href="${escapeHtml(link)}" style="background:#10b981;color:#022c22;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Sign in to Trailmap</a></p>
   <p style="font-size:13px;color:#555">If you didn’t ask for this, you can ignore this email.</p>
 </div>`,
-      })
+        })
+      } catch (err) {
+        // A failed send must not burn the sender's rate-limit budget or leave a
+        // dead token behind, so drop the row before surfacing the error.
+        await prisma.magicLinkToken.delete({ where: { id: row.id } }).catch(() => {})
+        throw err
+      }
     }
     res.json({ ok: true })
   } catch (err) {
