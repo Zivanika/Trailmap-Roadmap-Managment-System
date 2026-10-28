@@ -6,6 +6,7 @@ import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react
 import { Toaster } from '@/components/ui/Toaster'
 import { toast } from '@/store/toast-store'
 import { ApiError } from '@/lib/api-client'
+import { AnalyticsProvider } from '@/components/providers/AnalyticsProvider'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -31,6 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionProvider>
+      <AnalyticsProvider />
       <QueryClientProvider client={queryClient}>
         {children}
         <Toaster />
